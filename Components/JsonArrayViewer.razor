@@ -1,0 +1,40 @@
+@namespace Components
+
+@using System.Text.Json
+
+<ul>
+    @foreach (var item in ArrayData.EnumerateArray())
+    {
+        <li>
+            <details open="@ExpandAll">
+                <summary>Item</summary>
+                @if (item.ValueKind == JsonValueKind.Object)
+                {
+                    <JsonObjectViewer ObjectData="item" @bind-ExpandAll="@ExpandAll" />
+                }
+                else if (item.ValueKind == JsonValueKind.Array)
+                {
+                    <JsonArrayViewer ArrayData="item" @bind-ExpandAll="@ExpandAll" />
+                }
+                else
+                {
+                    <span>@item.ToString()</span>
+                }
+            </details>
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter]
+    public JsonElement ArrayData { get; set; }
+    [Parameter]
+    public bool ExpandAll { get; set; }
+    [Parameter]
+    public EventCallback<bool> ExpandAllChanged { get; set; }
+
+    private void OnExpandAllChanged(ChangeEventArgs e)
+    {
+        ExpandAllChanged.InvokeAsync((bool)e.Value);
+    }
+}

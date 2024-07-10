@@ -3,16 +3,28 @@
 @using System.IO
 @using System.Net
 @using System.Text.Json
+@using Components
 
 <input type="text" @bind-value="@InputValue" />
 <input type="submit" onclick="@(() => OnSubmit())" />
 
-<pre>@Response</pre>
+<button @onclick="ExpandAll">Expand All</button>
+
+<JsonObjectViewer ObjectData="@jsonObject" @bind-ExpandAll="expandAll" />
 
 @code
 {
     public string InputValue { get; set; } = "";
     public string Response { get; set; } = "";
+    private bool expandAll = false;
+
+    private void ExpandAll()
+    {
+        expandAll = !expandAll;
+        StateHasChanged();
+    }
+
+    private JsonElement jsonObject = JsonSerializer.Deserialize<JsonElement>("{}");
 
     private async Task OnSubmit()
     {
@@ -30,6 +42,7 @@
                 };
 
                 Response = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonElement>(data), options);
+                jsonObject = JsonSerializer.Deserialize<JsonElement>(Response);
                 StateHasChanged();
             }
         }
