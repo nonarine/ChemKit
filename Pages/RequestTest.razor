@@ -1,0 +1,37 @@
+@page "/request"
+
+@using System.IO
+@using System.Net
+@using System.Text.Json
+
+<input type="text" @bind-value="@InputValue" />
+<input type="submit" onclick="@(() => OnSubmit())" />
+
+<pre>@Response</pre>
+
+@code
+{
+    public string InputValue { get; set; } = "";
+    public string Response { get; set; } = "";
+
+    private async Task OnSubmit()
+    {
+        HttpClient _client = new HttpClient();
+
+        using(HttpResponseMessage response = await _client.GetAsync(
+            "https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/" + InputValue + "?format=json"
+        ))
+        {
+            var data = await response.Content.ReadAsStringAsync();
+            if(data != null)
+            {
+                var options = new JsonSerializerOptions(){
+                    WriteIndented = true
+                };
+
+                Response = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonElement>(data), options);
+                StateHasChanged();
+            }
+        }
+    }
+}
