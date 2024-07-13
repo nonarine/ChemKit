@@ -5,12 +5,24 @@
 @using System.Text.Json
 @using Components
 
+@inject ChemKit.Datasources.pubchem.Services.SubstanceService _substanceService
+@inject ChemKit.Datasources.pubchem.Services.CompoundService _compoundService
+
 <input type="text" @bind-value="@InputValue" />
 <input type="submit" onclick="@(() => OnSubmit())" />
 
 <button @onclick="ExpandAll">Expand All</button>
 
-<JsonObjectViewer ObjectData="@jsonObject" @bind-ExpandAll="expandAll" />
+<MudGrid Justify="Justify.SpaceBetween" Spacing="2">
+    @foreach(var jsonObject in jsonObjects)
+    {
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudPaper Elevation="1" Class="pa-3">
+                <JsonObjectViewer ObjectData="@jsonObject" @bind-ExpandAll="expandAll" />
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
 
 @code
 {
@@ -24,27 +36,21 @@
         StateHasChanged();
     }
 
-    private JsonElement jsonObject = JsonSerializer.Deserialize<JsonElement>("{}");
+    private List<JsonElement> jsonObjects = new List<JsonElement> { JsonSerializer.Deserialize<JsonElement>("{}") };
 
     private async Task OnSubmit()
     {
-        HttpClient _client = new HttpClient();
+        var substances = await _substanceService.SearchSubstancesAsync(InputValue);
 
-        using(HttpResponseMessage response = await _client.GetAsync(
-            "https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/" + InputValue + "?format=json"
-        ))
+        Response = string.Empty;
+
+        foreach(var s in substances)
         {
-            var data = await response.Content.ReadAsStringAsync();
-            if(data != null)
-            {
-                var options = new JsonSerializerOptions(){
-                    WriteIndented = true
-                };
-
-                Response = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonElement>(data), options);
-                jsonObject = JsonSerializer.Deserialize<JsonElement>(Response);
-                StateHasChanged();
-            }
+            jsonObjects.Add(
+                JsonSerializer.Deserialize<JsonElement>(s.PrintDetails())
+            );
         }
+
+        StateHasChanged();
     }
 }
