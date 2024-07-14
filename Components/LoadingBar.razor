@@ -1,0 +1,29 @@
+@inject LoadingBarService _loadingBarService
+@implements IDisposable
+
+<MudDialog>
+    <TitleContent>
+        <MudContainer>
+            <h1>
+                Loading...
+            </h1>
+        </MudContainer>
+    </TitleContent>
+    <DialogContent>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <MudProgressLinear Color="Color.Warning" Value="@_loadingBarService.ProgressPercentage" />
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    protected override void OnInitialized()
+    {
+        _loadingBarService.OnStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        _loadingBarService.OnStateChanged -= StateHasChanged;
+    }
+}

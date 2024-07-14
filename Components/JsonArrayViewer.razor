@@ -10,15 +10,15 @@
                 <summary>Item</summary>
                 @if (item.ValueKind == JsonValueKind.Object)
                 {
-                    <JsonObjectViewer ObjectData="item" @bind-ExpandAll="@ExpandAll" />
+                    <div style="padding-left: 2%;"><JsonObjectViewer ObjectData="item" @bind-ExpandAll="@ExpandAll" /></div>
                 }
                 else if (item.ValueKind == JsonValueKind.Array)
                 {
-                    <JsonArrayViewer ArrayData="item" @bind-ExpandAll="@ExpandAll" />
+                    <div style="padding-left: 2%;"><JsonArrayViewer ArrayData="item" @bind-ExpandAll="@ExpandAll" /></div>
                 }
                 else
                 {
-                    <span>@item.ToString()</span>
+                    <div style="padding-left: 2%;"><span>@item.ToString()</span></div>
                 }
             </details>
         </li>

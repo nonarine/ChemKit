@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ChemKit;
 using ChemKit.Datasources.pubchem.Models;
 
 namespace ChemKit.Datasources.pubchem.Services;
@@ -10,9 +11,11 @@ public class CompoundService
 {
     private readonly PubchemAPI _pubchemApi;
     private readonly ILogger<CompoundService> _logger;
+    private readonly LoadingBarService _loadingBarService;
 
-    public CompoundService(ILogger<CompoundService> logger)
+    public CompoundService(ILogger<CompoundService> logger, LoadingBarService loadingBarService)
     {
+        _loadingBarService = loadingBarService;
         _pubchemApi = new PubchemAPI();
         _logger = logger;
     }
@@ -44,28 +47,33 @@ public class CompoundService
 
     public async Task<List<Compound>> SearchCompoundsAsync(string searchTerm, int limit = 3)
     {
-        var json = await _pubchemApi.Search("compound", searchTerm, PubchemAPI.OutputFormat.JSON, limit);
-        if (json == null)
+        return await Task.Run(async () =>
         {
-            _logger.LogError("No data returned from PubChem API.");
-            return null;
-        }
-
-        var ids = ParseSearchResults(json, "compound");
-        var compounds = new List<Compound>();
-
-        foreach (var id in ids)
-        {
-            var compound = await GetCompoundByNameAsync(id);
-            if (compound != null)
+            var json = await _pubchemApi.Search("compound", searchTerm, PubchemAPI.OutputFormat.JSON, limit);
+            if (json == null)
             {
-                compounds.Add(compound);
-
-                _logger.LogInformation($"Got compound: {compound.PrintDetails()}");
+                _logger.LogError("No data returned from PubChem API.");
+                return null;
             }
-        }
 
-        return compounds;
+            var ids = ParseSearchResults(json, "compound");
+            var compoundTasks = new List<Task<Compound>>();
+
+            foreach (var id in ids)
+            {
+                compoundTasks.Add(GetCompoundByNameAsync(id));
+            }
+
+            var compounds = (await Task.WhenAll(compoundTasks)).Where(compound => compound != null).ToList();
+
+            foreach (var compound in compounds)
+            {
+                var serializedCompound = JsonConvert.SerializeObject(compound, Formatting.Indented);
+                _logger.LogInformation($"Got compound: {serializedCompound}");
+            }
+
+            return compounds;
+        });
     }
 
     private Compound ParseCompound(string json)

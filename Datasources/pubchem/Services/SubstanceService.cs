@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ChemKit.Datasources.pubchem.Models;
+using ChemKit;
 
 namespace ChemKit.Datasources.pubchem.Services;
 
@@ -11,9 +12,11 @@ public class SubstanceService
 {
     private readonly PubchemAPI _pubchemApi;
     private readonly ILogger<SubstanceService> _logger;
+    private readonly LoadingBarService _loadingBarService;
 
-    public SubstanceService(ILogger<SubstanceService> logger)
+    public SubstanceService(ILogger<SubstanceService> logger, LoadingBarService loadingBarService)
     {
+        _loadingBarService = loadingBarService;
         _pubchemApi = new PubchemAPI();
         _logger = logger;
     }
@@ -44,28 +47,35 @@ public class SubstanceService
 
     public async Task<List<Substance>> SearchSubstancesAsync(string searchTerm, int limit = 3)
     {
-        var json = await _pubchemApi.Search("compound", searchTerm, PubchemAPI.OutputFormat.JSON, limit);
-        if (json == null)
+        return await Task.Run(async () =>
         {
-            _logger.LogError("No data returned from PubChem API.");
-            return null;
-        }
-
-        var ids = ParseSearchResults(json, "compound");
-        var substances = new List<Substance>();
-
-        foreach (var id in ids)
-        {
-            var substance = await GetSubstanceByNameAsync(id);
-            if (substance != null)
+            // Search for compounds first
+            var compoundJson = await _pubchemApi.Search("compound", searchTerm, PubchemAPI.OutputFormat.JSON, limit);
+            if (compoundJson == null)
             {
-                substances.Add(substance);
-
-                _logger.LogInformation($"Got substance: {substance.PrintDetails()}");
+                _logger.LogError("No data returned from PubChem API for compounds.");
+                return null;
             }
-        }
 
-        return substances;
+            var compoundIds = ParseSearchResults(compoundJson, "compound");
+            var substanceTasks = new List<Task<Substance>>();
+
+            foreach (var compoundId in compoundIds)
+            {
+                // Use each compound ID to search for corresponding substances
+                substanceTasks.Add(GetSubstanceByNameAsync(compoundId));
+            }
+
+            var substances = (await _loadingBarService.WhenAll(substanceTasks)).Where(substance => substance != null).ToList();
+
+            foreach (var substance in substances)
+            {
+                var serializedSubstance = JsonConvert.SerializeObject(substance, Formatting.Indented);
+                _logger.LogInformation($"Got substance: {serializedSubstance}");
+            }
+
+            return substances;
+        });
     }
 
     private Substance ParseSubstance(string json)

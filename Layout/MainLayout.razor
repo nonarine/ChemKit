@@ -1,7 +1,13 @@
 ﻿@inherits LayoutComponentBase
+
+@inject IDialogService _dialogService
+@inject LoadingBarService _loadingBarService
+
+<LoadingBar />
+
 <div class="page">
 
-    <MudThemeProvider/>
+    <MudThemeProvider isDarkMode="@true" />
     <MudPopoverProvider/>
     <MudDialogProvider/>
     <MudSnackbarProvider/>
@@ -16,3 +22,11 @@
         </article>
     </main>
 </div>
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        _loadingBarService.DialogService = _dialogService;
+    }
+}

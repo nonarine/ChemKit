@@ -8,21 +8,31 @@
 @inject ChemKit.Datasources.pubchem.Services.SubstanceService _substanceService
 @inject ChemKit.Datasources.pubchem.Services.CompoundService _compoundService
 
-<input type="text" @bind-value="@InputValue" />
-<input type="submit" onclick="@(() => OnSubmit())" />
+<MudPaper style="max-width: 50%;">
+    <MudGrid Justify="Justify.SpaceAround" Spacing="2" style="margin: 1%;">
+        <MudTextField Variant="Variant.Outlined" T="string" @bind-value="@InputValue" style="margin: 1%;" />
+        <MudButton Color="Color.Primary" @onclick="@(() => OnSubmit())" style="margin: 1%;">Submit</MudButton>
 
-<button @onclick="ExpandAll">Expand All</button>
+        <MudButton @onclick="ExpandAll" style="margin: 1%; padding-right: 5%;">Expand All</MudButton>
+    </MudGrid>
+</MudPaper>
 
-<MudGrid Justify="Justify.SpaceBetween" Spacing="2">
-    @foreach(var jsonObject in jsonObjects)
-    {
-        <MudItem xs="12" sm="6" md="4" lg="3">
-            <MudPaper Elevation="1" Class="pa-3">
-                <JsonObjectViewer ObjectData="@jsonObject" @bind-ExpandAll="expandAll" />
-            </MudPaper>
-        </MudItem>
-    }
-</MudGrid>
+@if (!_loading && jsonObjects.Count() > 0)
+{
+    <MudGrid Justify="Justify.SpaceAround" Spacing="2" style="margin: 1%;">
+    @foreach (var jsonObject in jsonObjects)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="1" Class="pa-3">
+                    <JsonObjectViewer ObjectData="@jsonObject" @bind-ExpandAll="expandAll" />
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+else if (_loading)
+{
+}
 
 @code
 {
@@ -30,27 +40,35 @@
     public string Response { get; set; } = "";
     private bool expandAll = false;
 
+    private bool _loading = false;
+
     private void ExpandAll()
     {
         expandAll = !expandAll;
         StateHasChanged();
     }
 
-    private List<JsonElement> jsonObjects = new List<JsonElement> { JsonSerializer.Deserialize<JsonElement>("{}") };
+    private List<JsonElement> jsonObjects = new List<JsonElement> { };
 
     private async Task OnSubmit()
     {
+        _loading = true;
+        StateHasChanged();
+
         var substances = await _substanceService.SearchSubstancesAsync(InputValue);
 
         Response = string.Empty;
 
-        foreach(var s in substances)
+        jsonObjects = new List<JsonElement>();
+
+        foreach (var s in substances)
         {
             jsonObjects.Add(
                 JsonSerializer.Deserialize<JsonElement>(s.PrintDetails())
             );
         }
 
+        _loading = false;
         StateHasChanged();
     }
 }

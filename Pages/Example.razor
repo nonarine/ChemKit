@@ -1,0 +1,24 @@
+@page "/example"
+
+@inject LoadingBarService _loadingBarService
+
+<button @onclick="StartTasks">Start Tasks</button>
+
+@code {
+    private async Task StartTasks()
+    {
+        var tasks = new List<Task<string>>
+        {
+            Task.Delay(2000).ContinueWith(t => "Task 1"),
+            Task.Delay(4000).ContinueWith(t => "Task 2"),
+            Task.Delay(6000).ContinueWith(t => "Task 3")
+        };
+
+        var results = await _loadingBarService.WhenAll(tasks);
+
+        foreach (var result in results)
+        {
+            Console.WriteLine(result);
+        }
+    }
+}
